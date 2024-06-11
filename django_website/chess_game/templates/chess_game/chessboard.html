@@ -1,0 +1,429 @@
+{% extends "base.html" %} {% block content %}
+<style>
+	.chess-board {
+		border-spacing: 0;
+		border-collapse: collapse;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		max-width: 100%;
+	}
+  .chess-board th + th {
+    border-bottom: 1px solid #aaa;
+  }
+  .chess-board th:first-child, .chess-board td:last-child {
+    border-right: 1px solid #aaa;
+  }
+  .chess-board tr:last-child td {
+    border-bottom: 1px solid;
+  }
+  .chess-board th:empty {
+    border: none;
+  }
+	.chess-board th {
+		padding: 0.5em;
+	}
+	@media only screen and (min-width: 740px) {
+		.chess-board td {
+			min-width: 5em;
+			width: 5em;
+			height: 5em;
+		}
+	}
+	@media only screen and (max-width: 739px) and (min-width: 430px) {
+		.chess-board td {
+			min-width: 3em;
+			width: 3em;
+			height: 3em;
+		}
+	}
+	@media only screen and (max-width: 429px) {
+		.chess-board td {
+			min-width: 2em;
+			width: 2em;
+			height: 2em;
+		}
+	}
+	.chess-board .light {
+		background-color: #eee;
+	}
+	.chess-board .dark {
+		background-color: #aaa;
+	}
+  .piece-wk {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/3/3b/Chess_klt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-wq {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/4/49/Chess_qlt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-wr {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/5/5c/Chess_rlt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-wb {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/9/9b/Chess_blt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-wn {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/2/28/Chess_nlt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-wp {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/0/04/Chess_plt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-bk {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/e/e3/Chess_kdt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-bq {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/a/af/Chess_qdt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-br {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/a/a0/Chess_rdt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-bb {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/8/81/Chess_bdt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-bn {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/f/f1/Chess_ndt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+  .piece-bp {
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/c/cd/Chess_pdt60.png);
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+  }
+</style>
+
+
+<table class="chess-board">
+	<tbody>
+		<tr>
+			<th></th>
+			<th>a</th>
+			<th>b</th>
+			<th>c</th>
+			<th>d</th>
+			<th>e</th>
+			<th>f</th>
+			<th>g</th>
+			<th>h</th>
+		</tr>
+		<tr>
+			<th>8</th>
+			<td class="light square-8a"></td>
+			<td class="dark square-8b"></td>
+			<td class="light square-8c"></td>
+			<td class="dark square-8d"></td>
+			<td class="light square-8e"></td>
+			<td class="dark square-8f"></td>
+			<td class="light square-8g"></td>
+			<td class="dark square-8h"></td>
+		</tr>
+		<tr>
+			<th>7</th>
+			<td class="dark square-7a"></td>
+			<td class="light square-7b"></td>
+			<td class="dark square-7c"></td>
+			<td class="light square-7d"></td>
+			<td class="dark square-7e"></td>
+			<td class="light square-7f"></td>
+			<td class="dark square-7g"></td>
+			<td class="light square-7h"></td>
+		</tr>
+		<tr>
+			<th>6</th>
+			<td class="light square-6a"></td>
+			<td class="dark square-6b"></td>
+			<td class="light square-6c"></td>
+			<td class="dark square-6d"></td>
+			<td class="light square-6e"></td>
+			<td class="dark square-6f"></td>
+			<td class="light square-6g"></td>
+			<td class="dark square-6h"></td>
+		</tr>
+		<tr>
+			<th>5</th>
+			<td class="dark square-5a"></td>
+			<td class="light square-5b"></td>
+			<td class="dark square-5c"></td>
+			<td class="light square-5d"></td>
+			<td class="dark square-5e"></td>
+			<td class="light square-5f"></td>
+			<td class="dark square-5g"></td>
+			<td class="light square-5h"></td>
+		</tr>
+		<tr>
+			<th>4</th>
+			<td class="light square-4a"></td>
+			<td class="dark square-4b"></td>
+			<td class="light square-4c"></td>
+			<td class="dark square-4d"></td>
+			<td class="light square-4e"></td>
+			<td class="dark square-4f"></td>
+			<td class="light square-4g"></td>
+			<td class="dark square-4h"></td>
+		</tr>
+		<tr>
+			<th>3</th>
+			<td class="dark square-3a"></td>
+			<td class="light square-3b"></td>
+			<td class="dark square-3c"></td>
+			<td class="light square-3d"></td>
+			<td class="dark square-3e"></td>
+			<td class="light square-3f"></td>
+			<td class="dark square-3g"></td>
+			<td class="light square-3h"></td>
+		</tr>
+		<tr>
+			<th>2</th>
+			<td class="light square-2a"></td>
+			<td class="dark square-2b"></td>
+			<td class="light square-2c"></td>
+			<td class="dark square-2d"></td>
+			<td class="light square-2e"></td>
+			<td class="dark square-2f"></td>
+			<td class="light square-2g"></td>
+			<td class="dark square-2h"></td>
+		</tr>
+		<tr>
+			<th>1</th>
+			<td class="dark square-1a"></td>
+			<td class="light square-1b"></td>
+			<td class="dark square-1c"></td>
+			<td class="light square-1d"></td>
+			<td class="dark square-1e"></td>
+			<td class="light square-1f"></td>
+			<td class="dark square-1g"></td>
+			<td class="light square-1h"></td>
+		</tr>
+	</tbody>
+</table>
+{% endblock content %}
+
+{% block scripts %}
+{{ game_id|json_script:"game_id" }}
+{{ request.user.username|json_script:"user_username" }}
+{{ player_color|json_script:"player_color" }}
+<script>
+	let lightSquares = document.querySelectorAll(".light");
+	let darkSquares = document.querySelectorAll(".dark");
+  let allSquares = document.querySelectorAll(".light,.dark");
+	let whitePieceSquares = document.querySelectorAll("[class*='piece-w']");
+	let blackPieceSquares = document.querySelectorAll("[class*='piece-b']");
+	let pieceSquares = new Set([
+		...whitePieceSquares,
+		...blackPieceSquares
+	]);;
+	let selectedSquare = null;
+	
+	const user_username = JSON.parse(document.getElementById("user_username").textContent);
+	const game_id = JSON.parse(document.getElementById("game_id").textContent);
+	const player_color = JSON.parse(document.getElementById("player_color").textContent);
+	let gameSocketProtocol = window.location.protocol == "https:" ? "wss" : "ws";
+	const gameSocket = new WebSocket(`${gameSocketProtocol}://${window.location.host}/ws/chess/${game_id}/`)
+	// const gameSocket = new WebSocket(`${gameSocketProtocol}://192.168.1.22:8000/ws/chess/${game_id}/`)
+	const COORDINATE_TO_SQUARE = {
+		1: "a",
+		2: "b",
+		3: "c",
+		4: "d",
+		5: "e",
+		6: "f",
+		7: "g",
+		8: "h",
+	}
+	const SQUARE_TO_COORDINATE = {
+		"a": 1,
+		"b": 2,
+		"c": 3,
+		"d": 4,
+		"e": 5,
+		"f": 6,
+		"g": 7,
+		"h": 8,
+	}
+	const NUM_TO_PIECE = {
+		1: "p",
+		2: "n",
+		3: "b",
+		4: "r",
+		5: "q",
+		6: "k",
+	}
+	const NUM_TO_COLOR = {
+		1: "w",
+		"-1": "b",
+	}
+	const COLOR_TO_NUM = {
+		"w": 1,
+		"b": -1,
+	}
+
+	function updatePieceSquares() {
+		whitePieceSquares = document.querySelectorAll("[class*='piece-w']");
+		blackPieceSquares = document.querySelectorAll("[class*='piece-b']");
+		pieceSquares = new Set([
+			...whitePieceSquares,
+			...blackPieceSquares
+		]);;
+	}
+
+	function renderDefaultColors() {
+		lightSquares.forEach((sq) => {
+			sq.style.backgroundColor = "#eee";
+		});
+		darkSquares.forEach((sq) => {
+			sq.style.backgroundColor = "#aaa";
+		});
+	}
+
+	function nodelistIncludes(list, element) {
+		return list.values().some(el => el === element)
+	}
+
+	function makeMove(endx, endy) {
+		let startx = selectedSquare.className.split("square-")[1][0];
+		let starty = selectedSquare.className.split("square-")[1][1];;
+		let pieceType = selectedSquare.className.split("piece-")[1][1];
+
+		gameSocket.send(JSON.stringify({
+			"command": "move",
+			"move": {
+				"start": [startx, starty],
+				"end": [endx, endy]
+			},
+			"color": player_color,
+			"pieceType": pieceType,
+			"username": user_username
+		}))
+		selectedSquare = null;
+	};
+
+	gameSocket.onmessage = function(e) {
+		let data = JSON.parse(e.data);
+		
+		let command = data["command"]
+
+		if (command === "make_move") {
+			let startx = data["move"]["start"][0]+1;
+			let starty = COORDINATE_TO_SQUARE[data["move"]["start"][1]+1];
+			let endx = data["move"]["end"][0]+1;
+			let endy = COORDINATE_TO_SQUARE[data["move"]["end"][1]+1];
+			let qCastle = data["move"]["qCastle"];
+			let kCastle = data["move"]["kCastle"];
+			let enPassant = data["move"]["enPassant"];
+			let color = data["color"];
+			let pieceType = data["pieceType"];
+	
+			let startSquare = document.querySelector(".square-" + startx.toString() + starty);
+			let endSquare = document.querySelector(".square-" + endx.toString() + endy);
+			startSquare.classList.remove("piece-" + color + pieceType);
+			let removeClassNameSplit = endSquare.className.split("piece-")[1];
+			if (removeClassNameSplit !== undefined) {
+				endSquare.classList.remove("piece-" + removeClassNameSplit.slice(0, 2));
+			}
+			console.log(color, pieceType)
+			endSquare.classList.add("piece-" + color + pieceType);
+
+			if (qCastle) {
+				let rookStarty = COORDINATE_TO_SQUARE[data["move"]["end"][1]-1];
+				let rookEndy = COORDINATE_TO_SQUARE[data["move"]["end"][1]+2];
+				let rookSquare = document.querySelector(".square-" + endx.toString() + rookStarty);
+				let targetSquare = document.querySelector(".square-" + endx.toString() + rookEndy);
+
+				rookSquare.classList.remove("piece-" + color + "r");
+				targetSquare.classList.add("piece-" + color + "r");
+			}
+			if (kCastle) {
+				let rookStarty = COORDINATE_TO_SQUARE[data["move"]["end"][1]+2];
+				let rookEndy = COORDINATE_TO_SQUARE[data["move"]["end"][1]];
+				let rookSquare = document.querySelector(".square-" + endx.toString() + rookStarty);
+				let targetSquare = document.querySelector(".square-" + endx.toString() + rookEndy);
+
+				rookSquare.classList.remove("piece-" + color + "r");
+				targetSquare.classList.add("piece-" + color + "r");
+			}
+
+			if (enPassant) {
+				console.log(endx-color, endy)
+				let capturedPawn = document.querySelector(".square-" + (endx-COLOR_TO_NUM[color]).toString() + endy);
+
+				capturedPawn.classList.remove("piece-" + NUM_TO_COLOR[-COLOR_TO_NUM[color]] + "p");
+			}
+
+			updatePieceSquares();
+		}
+		else if (command === "initiate_position") {
+			let board = data["board"];
+			console.log(board)
+
+			for (let square of allSquares) {
+				let square_coords = square.className.split("square-")[1];
+				let x = parseInt(square_coords[0])-1;
+				let y = SQUARE_TO_COORDINATE[square_coords[1]]-1;
+				let piece_num = board[x][y];
+
+				if (piece_num === 0) {
+					continue
+				}
+
+				let color_num = piece_num/Math.abs(piece_num);
+				let piece = NUM_TO_PIECE[color_num*piece_num];
+				let color = NUM_TO_COLOR[color_num];
+				console.log(color, piece, color_num, piece_num)
+				square.classList.add("piece-" + color + piece);
+			}
+			updatePieceSquares();
+		}
+	}
+
+	function handleClick() {
+		renderDefaultColors();
+		console.log(player_color, selectedSquare, nodelistIncludes(pieceSquares, this))
+		let pieceColor = null;
+		if (nodelistIncludes(pieceSquares, this)) {
+			pieceColor = this.className.split("piece-")[1][0];
+		}
+		console.log(pieceColor)
+		if (
+			selectedSquare === null ||
+			player_color === "w" && nodelistIncludes(whitePieceSquares, this) ||
+			player_color === "b" && nodelistIncludes(blackPieceSquares, this)
+			) {
+			if (nodelistIncludes(pieceSquares, this) && pieceColor === player_color) {
+				selectedSquare = this;
+				this.style.backgroundColor = "red";
+			} else {
+				selectedSquare = null;
+			}
+		} else {
+			console.log(1)
+
+			makeMove(this.className.split("square-")[1][0], this.className.split("square-")[1][1])
+		}
+	}
+
+	allSquares.forEach((sq) => {
+		sq.addEventListener("click", handleClick);
+	});
+</script>
+{% endblock scripts %}
