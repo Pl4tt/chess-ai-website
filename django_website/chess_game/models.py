@@ -15,6 +15,12 @@ class PieceChoice(models.IntegerChoices):
     QUEEN = 5, "Queen"
     KING = 6, "King"
     
+class ConversionPieceChoice(models.IntegerChoices):
+    KNIGHT = 2, "Knight"
+    BISHOP = 3, "Bishop"
+    ROOK = 4, "Rook"
+    QUEEN = 5, "Queen"
+    
 
 class MultiplayerChessGame(models.Model):
     white_player = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="white_player", related_name="white_games", on_delete=models.CASCADE, blank=True)
@@ -99,6 +105,7 @@ class Move(models.Model):
     to_x = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(7)])
     to_y = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(7)])
     color = models.IntegerField(choices=ColorChoice.choices)
+    conversion_piece = models.IntegerField(choices=ConversionPieceChoice.choices, blank=True, null=True)
 
 class MultiplayerGameMove(Move):
     game = models.ForeignKey(MultiplayerChessGame, verbose_name="game", related_name="moves", on_delete=models.CASCADE)

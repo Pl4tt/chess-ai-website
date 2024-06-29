@@ -5,8 +5,8 @@ from django.urls import reverse
 
 from account.models import Account
 
-from .constants import PIECE_TO_NUM, SQUARE_TO_COORDINATE
-from .board import ChessBoard
+from .constants import NUM_TO_PIECE, PIECE_TO_NUM, SQUARE_TO_COORDINATE
+from .board import STR_TO_PIECE, ChessBoard
 from .models import Matchmaking, MultiplayerGameCapture, MultiplayerChessGame, MultiplayerGameMove
 
 
@@ -78,7 +78,8 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
         moves = self.game_room.moves.all()
         
         for move in moves:
-            move_feedback = self.board.make_move([move.from_x, move.from_y], [move.to_x, move.to_y])
+            
+            move_feedback = self.board.make_move([move.from_x, move.from_y], [move.to_x, move.to_y], NUM_TO_PIECE.get(move.conversion_piece))
             print(move_feedback)
 
     async def receive(self, text_data):
@@ -99,19 +100,33 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                 starty = SQUARE_TO_COORDINATE.get(move["start"][1])-1
                 endx = int(move["end"][0])-1
                 endy = SQUARE_TO_COORDINATE.get(move["end"][1])-1
-                board_move = self.board.make_move([startx, starty], [endx, endy])
+                conversion_piece = move.get("conversionPiece", None)
+                
+                board_move = self.board.make_move([startx, starty], [endx, endy], conversion_piece)
                 print(board_move)
                 if board_move[0]:
                     color = text_data_json["color"]
                     piece_type = text_data_json["pieceType"]
-                    db_move = MultiplayerGameMove(
-                        from_x=startx,
-                        from_y=starty,
-                        to_x=endx,
-                        to_y=endy,
-                        color=self.color,
-                        game=self.game_room
-                    )
+                    
+                    if conversion_piece in STR_TO_PIECE.keys():
+                        db_move = MultiplayerGameMove(
+                            from_x=startx,
+                            from_y=starty,
+                            to_x=endx,
+                            to_y=endy,
+                            color=self.color,
+                            conversion_piece=PIECE_TO_NUM[conversion_piece],
+                            game=self.game_room
+                        )
+                    else:
+                        db_move = MultiplayerGameMove(
+                            from_x=startx,
+                            from_y=starty,
+                            to_x=endx,
+                            to_y=endy,
+                            color=self.color,
+                            game=self.game_room
+                        )
                     await sync_to_async(db_move.save, thread_sensitive=True)()
                     
                     if board_move[1] is not None:
@@ -132,6 +147,7 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                                 "qCastle": board_move[2],
                                 "kCastle": board_move[3],
                                 "enPassant": board_move[4],
+                                "conversion": board_move[5],
                             },
                             "color": color,
                             "pieceType": piece_type,
@@ -145,7 +161,8 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                             "type": "update_board",
                             "move": {
                                 "start": [startx, starty],
-                                "end": [endx, endy]
+                                "end": [endx, endy],
+                                "conversionPiece": board_move[5],
                             },
                             "color": color,
                             "username": username
@@ -178,12 +195,13 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
         starty = move["start"][1]
         endx = move["end"][0]
         endy = move["end"][1]
+        conversion_piece = move.get("conversionPiece")
 
         if (
             self.board.prev_move != ([startx, starty], [endx, endy], num_color, True) and
             self.board.prev_move != ([startx, starty], [endx, endy], num_color, False)
         ):
-            self.board.make_move([startx, starty], [endx, endy])
+            self.board.make_move([startx, starty], [endx, endy], conversion_piece)
 
     async def move_made(self, event):
         move = event["move"]
