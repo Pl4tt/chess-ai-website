@@ -176,7 +176,7 @@ class Matchmaking(models.Model):
                         break
                 
                 if self.connected_users_count() == 1:
-                    game_type = random.randint(-1, 1) # <0: ai, >=0: wait
+                    game_type = random.randint(-1, 3) # <0: ai, >=0: wait
 
                     if game_type < 0:
                         new_games.append(self.join_ai_game())

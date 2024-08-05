@@ -5,20 +5,33 @@ Matchmaking
 {% block scripts %}
 {{ request.user.username|json_script:"user_username" }}
 <script>
+	const user_username = JSON.parse(document.getElementById("user_username").textContent);
   let matchmakingSocketProtocol = window.location.protocol == "https:" ? "wss" : "ws";
 	const matchmakingSocket = new WebSocket(`${matchmakingSocketProtocol}://${window.location.host}/ws/chess/matchmaking/`)
-	
+
   matchmakingSocket.onmessage = function(e) {
 		let data = JSON.parse(e.data);
     
     let command = data["command"];
-    console.log(0)
+
     if (command === "join_game") {
       let url = data["gameUrl"];
       console.log(url)
       window.location.replace(url);
+    } else if (command === "wait_for_game") {
+      console.log("Waiting for game")
     }
   }
+
+  function retry_join_game() {
+    
+    matchmakingSocket.send(JSON.stringify({
+      "command": "retry_join_game",
+      "username": user_username,
+    }))
+  }
+
+  setInterval(retry_join_game, 3000);
 
 </script>
 {% endblock scripts %}

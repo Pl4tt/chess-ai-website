@@ -304,7 +304,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                "type": "new_connection",
+                "type": "try_join_game",
             }
         )
         
@@ -316,7 +316,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 
         await sync_to_async(self.matchmaking.leave, thread_sensitive=True)(self.user)
 
-    async def new_connection(self, event):
+    async def try_join_game(self, event):
         new_games = await sync_to_async(self.matchmaking.join_game, thread_sensitive=True)()
 
         for game in new_games:
@@ -345,7 +345,34 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
                         "user_username": users[0].username
                     }
                 )
+        
+        if not new_games:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "waiting_signal",
+                    "user_username": self.user.username
+                }
+            )
     
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        command = text_data_json.get("command")
+
+        if command == "retry_join_game":
+            username = text_data_json.get("username")
+            
+            if username != self.user.username:
+                await self.disconnect(close_code=4003)
+                return
+
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "try_join_game",
+                }
+            )
+
     async def game_connection(self, event):
         game_url = event["game_url"]
         user1_username = event["user1_username"]
@@ -368,3 +395,11 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
                 "gameUrl": game_url,
             }))
             await self.close()
+        
+    async def waiting_signal(self, event):
+        user_username = event["user_username"]
+
+        if user_username == self.user.username:
+            await self.send(json.dumps({
+                "command": "wait_for_game"
+            }))
