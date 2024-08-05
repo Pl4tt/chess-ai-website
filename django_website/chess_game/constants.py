@@ -35,3 +35,8 @@ SQUARE_TO_COORDINATE = {
     "g": 7,
     "h": 8
 }
+
+ALLOWED_TYPES = ["multiplayer", "ai"]
+
+ENCRYPTION_CHARS = "ai-1234567890multiplayer"
+ENCRYPTION_KEY = "SHr)FG4°*ç(JKL$q§12='?^MNDweYz,.VC-;BXt:_3A>poiu<"

@@ -1,8 +1,11 @@
-from django.http import HttpRequest
+from typing import Any
+from django.http import Http404, HttpRequest, HttpResponseNotAllowed
 from django.shortcuts import render
 from django.views.generic.base import TemplateView
 
-from .models import Matchmaking, MultiplayerChessGame
+from .constants import ALLOWED_TYPES
+from .url_encryption import decrypt
+from .models import AIChessGame, Matchmaking, MultiplayerChessGame
 
 
 DEFAULT_POSITION = [
@@ -23,29 +26,42 @@ class LobbyView(TemplateView):
 
 class MatchmakingView(TemplateView):
     template_name = "chess_game/matchmaking.html"
-    
-    # def post(self, request, *args, **kwargs):
-    #     print(0)
-    #     matchmaking = Matchmaking.object()
-    #     matchmaking.join(request.user)
-    #     print(1)
-        
-    #     return self.get(HttpRequest())
-
 
 class ChessGameView(TemplateView):
-    template_name = "chess_game/chessboard.html"
+    # template_name = "chess_game/chessboard.html"
+    allowed_types = ALLOWED_TYPES
+    
+    def get_template_names(self):
+        if self.game_type == "multiplayer":
+            self.template_name = "chess_game/multiplayer_chessboard.html"
+        else:
+            self.template_name = "chess_game/ai_chessboard.html"
+        
+        return super().get_template_names()
+        
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        game = MultiplayerChessGame.objects.get(pk=self.kwargs.get("game_id"))
+
+        game_string = decrypt(self.kwargs.get("encrypted_game", "error-404"))
+        split_game_string = game_string.split("-")
+        
+        self.game_type, self.game_id = split_game_string[0], int(split_game_string[1])
+        
+        print(self.game_type)
+        print(self.game_id)
+        
+        if not self.game_type in self.allowed_types:
+            raise Http404()
+        
+        if self.game_type == "multiplayer":
+            game = MultiplayerChessGame.objects.get(pk=self.game_id)
+        else:
+            game = AIChessGame.objects.get(pk=self.game_id)
         
         context["game_id"] = game.pk
         context["player_color"] = game.get_user_color(self.request.user)
+        context["game_type"] = self.game_type
         
         return context
 
-
-def move(request):
-    if request.POST:
-        pass

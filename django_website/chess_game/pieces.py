@@ -44,9 +44,28 @@ class ChessPiece:
     def is_valid_move(self, start_pos, end_pos, board, castles_allowed, player_turn, prev_move, end_piece):
         return False
 
-    def move(self):
-        pass
+    def get_all_valid_moves(self, pos, board, castles_allowed, player_turn, prev_move):
+        moves = []
+        
+        for x in range(len(board)):
+            for y, end_piece in enumerate(board[x]):
+                if end_piece is not None and end_piece.color == self.color:
+                    continue
+                if isinstance(self, PawnPiece) and x == 3.5-3.5*self.color:
+                    continue
+                
+                if self.is_valid_move(pos, [x, y], board, castles_allowed, player_turn, prev_move, end_piece):
+                    conversion = isinstance(self, PawnPiece) and x == 3.5+player_turn*3.5
+                    
+                    if not conversion:
+                        moves.append([pos, [x, y], None])
+                    else:
+                        moves.append([pos, [x, y], "q"])
+                        moves.append([pos, [x, y], "r"])
+                        moves.append([pos, [x, y], "b"])
+                        moves.append([pos, [x, y], "n"])
 
+        return moves
 
 class KingPiece(ChessPiece):
     def __init__(self, color) -> None:
@@ -54,7 +73,7 @@ class KingPiece(ChessPiece):
         self.name = KING
 
     def is_valid_move(self, start_pos, end_pos, board, castles_allowed, player_turn, *args, **kwargs):
-        if abs(end_pos[1]-start_pos[1]) == 2: # castle
+        if abs(end_pos[1]-start_pos[1]) == 2 and end_pos[0] == start_pos[0]: # castle
             if end_pos[1] > start_pos[1]: # king side castle
                 if (
                 board[start_pos[0]][start_pos[1]+1] is None and

@@ -1,3 +1,5 @@
+import random
+from django.core.cache import cache
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.conf import settings
@@ -77,7 +79,7 @@ class AIChessGame(models.Model):
     def get_user_color(self, user):
         if not self.check_user(user):
             return None
-        return "w" if user == self.white_player else "b"
+        return "w" if self.color == 1 else "b"
 
     def join(self, user):
         if not self.is_connected(user):
@@ -157,13 +159,50 @@ class Matchmaking(models.Model):
         return len(self.connected_users.all())
     
     def join_game(self):
-        if self.connected_users_count() >= 2:
-            user0, user1 = self.connected_users.all()[:2]
-            self.leave(user0)
-            self.leave(user1)
-            
-            game = MultiplayerChessGame(white_player=user0, black_player=user1)
-            game.save()
-            
-            return [user0, user1], game.pk
+        lock_id = "join_game_lock"
+        lock_acquired = cache.add(lock_id, "locked", 100)
+        new_games = []
+        
+        if lock_acquired:
+            try:
+                while self.connected_users_count() >= 2:
+                    game_type = random.randint(-1, 2) # <0: ai, 0: wait, >0: multiplayer
+
+                    if game_type < 0:
+                        new_games.append(self.join_ai_game())
+                    elif game_type > 0:
+                        new_games.append(self.join_multiplayer_game())
+                    else:
+                        break
+                
+                if self.connected_users_count() == 1:
+                    game_type = random.randint(-1, 1) # <0: ai, >=0: wait
+
+                    if game_type < 0:
+                        new_games.append(self.join_ai_game())
+
+            finally:
+                cache.delete(lock_id)
+        else:
+            print("New game is already being created by another consumer.")
+        
+        return new_games
     
+    def join_multiplayer_game(self):
+        user0, user1 = self.connected_users.all()[:2][:]
+        self.leave(user0)
+        self.leave(user1)
+        
+        game = MultiplayerChessGame(white_player=user0, black_player=user1)
+        game.save()
+
+        return [[user0, user1], game.pk]
+
+    def join_ai_game(self):
+        user = self.connected_users.all()[0]
+        self.leave(user)
+        
+        game = AIChessGame(player=user, color=1)
+        game.save()
+
+        return [[user], game.pk]

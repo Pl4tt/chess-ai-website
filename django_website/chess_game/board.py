@@ -1,3 +1,6 @@
+from copy import deepcopy
+import itertools
+
 from .pieces import KingPiece, QueenPiece, RookPiece, BishopPiece, KnightPiece, PawnPiece
 
 
@@ -22,6 +25,7 @@ class ChessBoard:
         self.player_turn = 1
         self.prev_move = None
         self.castles_allowed = [True, True, True, True] # wq, wk, bq, bk
+        self.en_passant_square = -1 # -1 / 0, 1, ..., 63 (- -> -1, a1 -> 0, a2 -> 1, ..., h8 -> 63)
         
         self.board = [[None for _ in range(8)] for _ in range(8)]
 
@@ -56,6 +60,22 @@ class ChessBoard:
             -1: [7, 4],
         }
     
+    def get_all_legal_moves(self):
+        moves = []
+
+        for x in range(len(self.board)):
+            for y, piece in enumerate(self.board[x]):
+                if piece is None or piece.color != self.player_turn:
+                    continue
+                
+                for move in piece.get_all_valid_moves([x, y], self.board, self.castles_allowed, self.player_turn, self.prev_move):
+                    temp_test_board = deepcopy(self)
+                    
+                    if temp_test_board.make_move(*move)[0]:
+                        moves.append(move)
+
+        return moves
+
     def is_check(self):
         king_piece = self.board[self.king_pos[self.player_turn][0]][self.king_pos[self.player_turn][1]]
         for x in range(len(self.board)):
@@ -67,6 +87,12 @@ class ChessBoard:
                     return True
         
         return False
+    
+    def check_game_over(self): # 1: white win, -1: black win, 2: draw, 0: not game over
+        if self.is_check():
+            return -self.player_turn if not self.get_all_legal_moves() else 0
+        else: # check for stalemate
+            return 2 if not self.get_all_legal_moves() else 0
     
     def make_move(self, start_pos, end_pos, conversion_piece): # conversion_piece: None/q/r/b/n
         """
@@ -108,10 +134,11 @@ class ChessBoard:
         
         if end_piece is not None and end_piece.color == color:
             return False, return_captures, q_castle_move, k_castle_move, en_passant_move, return_conversion
-        
+
         if piece.is_valid_move(start_pos, end_pos, self.board, self.castles_allowed, self.player_turn, self.prev_move, end_piece):
             if end_piece is not None:
                 return_captures = (end_piece.color, end_piece.name)
+                
             allows_en_passant = isinstance(piece, PawnPiece) and abs(end_pos[0]-start_pos[0]) == 2
             
             if isinstance(piece, KingPiece) and abs(end_pos[1]-start_pos[1]) == 2 and self.is_check():
@@ -167,11 +194,18 @@ class ChessBoard:
                 self.castles_allowed[-color+2] = False
 
             # Conversion
-            print(conversion_piece)
-            if conversion_piece in STR_TO_PIECE.keys():
-                print(STR_TO_PIECE[conversion_piece](self.player_turn))
+            if isinstance(piece, PawnPiece) and end_pos[0] == 3.5+color*3.5 and conversion_piece in STR_TO_PIECE.keys():
+                # print(STR_TO_PIECE[conversion_piece](self.player_turn))
                 self.board[endx][endy] = STR_TO_PIECE[conversion_piece](self.player_turn)
                 return_conversion = conversion_piece
+
+            # Update self.en_passant_square
+            if allows_en_passant:
+                enpassant_row = end_pos[0]-self.player_turn
+                enpassant_col = end_pos[1]
+                self.en_passant_square = 8*enpassant_row + enpassant_col
+            else:
+                self.en_passant_square = -1
 
             self.prev_move = (start_pos, end_pos, color, allows_en_passant)
             self.player_turn *= -1
@@ -193,4 +227,16 @@ class ChessBoard:
                     return_board[-1].append(piece.color*PIECE_OBJ_TO_NUM[type(piece)])
 
         return return_board
-        
+    
+    @property
+    def ai_input_list(self):
+        chess_board = list(itertools.chain(*self.integer_board[::-1])) # [a8, b8, ..., h8, a7, ..., h1]
+        chess_board += [
+            self.player_turn,
+            self.castles_allowed[1], # wk
+            self.castles_allowed[0], # wq
+            self.castles_allowed[3], # bk
+            self.castles_allowed[2], # bq
+            self.en_passant_square,
+        ]
+        return chess_board

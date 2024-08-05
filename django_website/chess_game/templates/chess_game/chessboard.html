@@ -311,6 +311,7 @@
 
 {% block scripts %}
 {{ game_id|json_script:"game_id" }}
+{{ game_type|json_script:"game_type" }}
 {{ request.user.username|json_script:"user_username" }}
 {{ player_color|json_script:"player_color" }}
 <script>
@@ -334,9 +335,10 @@
 	
 	const user_username = JSON.parse(document.getElementById("user_username").textContent);
 	const game_id = JSON.parse(document.getElementById("game_id").textContent);
+	const game_type = JSON.parse(document.getElementById("game_type").textContent);
 	const player_color = JSON.parse(document.getElementById("player_color").textContent);
 	let gameSocketProtocol = window.location.protocol == "https:" ? "wss" : "ws";
-	const gameSocket = new WebSocket(`${gameSocketProtocol}://${window.location.host}/ws/chess/${game_id}/`)
+	const gameSocket = new WebSocket(`${gameSocketProtocol}://${window.location.host}/ws/chess/${game_type}/${game_id}/`)
 	// const gameSocket = new WebSocket(`${gameSocketProtocol}://192.168.1.22:8000/ws/chess/${game_id}/`)
 	const COORDINATE_TO_SQUARE = {
 		1: "a",
@@ -465,6 +467,11 @@
 	
 			let startSquare = document.querySelector(".square-" + startx.toString() + starty);
 			let endSquare = document.querySelector(".square-" + endx.toString() + endy);
+			console.log(startSquare)
+			console.log(".square-" + startx.toString() + starty)
+			console.log(endSquare)
+			console.log(conversion)
+			console.log("piece-" + color + pieceType)
 			startSquare.classList.remove("piece-" + color + pieceType);
 			let removeClassNameSplit = endSquare.className.split("piece-")[1];
 			if (removeClassNameSplit !== undefined) {

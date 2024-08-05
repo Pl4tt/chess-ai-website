@@ -138,9 +138,10 @@ STATICFILES_DIRS = [
 STATIC_URL = '/static/static/'
 MEDIA_URL = "/static/media/"
 
-STATIC_ROOT = os.path.join(BASE_DIR, "static_cdn")
-MEDIA_ROOT = os.path.join(BASE_DIR, "media_cdn")
-TEMP = os.path.join(BASE_DIR, "media_cdn/temp")
+if DEBUG:
+    STATIC_ROOT = os.path.join(BASE_DIR, "static_cdn")
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media_cdn")
+    TEMP = os.path.join(BASE_DIR, "media_cdn/temp")
 
 BASE_URL = "http://127.0.0.1:8000"
 

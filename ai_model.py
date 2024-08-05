@@ -9,7 +9,7 @@ from keras import layers
 
 # white = 1, black = -1
 
-# board: [square0 (a8), square1 (a7), ..., square63 (h1), player, castleK, castleQ, castlek, castleq, enPassant]
+# board: [square0 (a8), square1 (b8), ..., square63 (h1), player, castleK, castleQ, castlek, castleq, enPassant]
 # player: 1 / -1
 # castle: 0/1
 # enPassant: -1 / 0, 1, ..., 63 (- -> -1, a1 -> 0, a2 -> 1, ..., h8 -> 63)
@@ -63,8 +63,9 @@ def create_model(num_hneurons):
     num_hlayers = len(num_hneurons)
     input_shape = (70,)
 
-    model.add(layers.Dense(num_hneurons[0], input_shape=input_shape))
-
+    # model.add(layers.Dense(num_hneurons[0], input_shape=input_shape))
+    model.add(layers.InputLayer(num_hneurons[0], input_shape=input_shape))
+    
     for i in range(1, num_hlayers):
         model.add(layers.Dense(num_hneurons[i], activation="relu"))
         

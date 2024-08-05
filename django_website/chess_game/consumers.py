@@ -1,29 +1,40 @@
+from copy import deepcopy
 import json
+import random
+import tensorflow as tf
+from tensorflow import keras
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from django.urls import reverse
+from django.conf import settings
+from django.templatetags.static import static
+from django.contrib.staticfiles import finders
 
 from account.models import Account
+from .mcts import MCTSNode, mcts
+from .url_encryption import encrypt
 
-from .constants import NUM_TO_PIECE, PIECE_TO_NUM, SQUARE_TO_COORDINATE
+from .constants import ALLOWED_TYPES, NUM_TO_PIECE, PIECE_TO_NUM, SQUARE_TO_COORDINATE
 from .board import STR_TO_PIECE, ChessBoard
-from .models import Matchmaking, MultiplayerGameCapture, MultiplayerChessGame, MultiplayerGameMove
+from .models import AIChessGame, AIGameMove, Matchmaking, MultiplayerGameCapture, MultiplayerChessGame, MultiplayerGameMove
 
 
 class ChessGameConsumer(AsyncWebsocketConsumer):
     """
     receive(): json input of form (a, b, c, d: Integers):
     {
-        'type': 'move_made',
+        'command': 'move',
         'move': {
             'start': [a, b],
-            'end': [c, d]
+            'end': [c, d],
+            'conversion' (optional): q/r/b/n
         },
-        "color": color,
-        "pieceType": pieceType,
+        'color': color,
+        'pieceType': pieceType,
         'username': username
     }
     """
+    allowed_types = ALLOWED_TYPES
     
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -31,11 +42,24 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["game_id"]
-        self.room_group_name = f"game_{self.room_name}"
+        self.game_room_type = self.scope["url_route"]["kwargs"]["game_type"]
+        self.room_group_name = f"game_{self.game_room_type}_{self.room_name}"
         self.user = self.scope["user"]
         
+        if not self.game_room_type in self.allowed_types:
+            self.close()
+        
         try:
-            game = await sync_to_async(MultiplayerChessGame.objects.get, thread_sensitive=True)(pk=self.room_name)
+            if self.game_room_type == "multiplayer":
+                game = await sync_to_async(MultiplayerChessGame.objects.get, thread_sensitive=True)(pk=self.room_name)
+            else:
+                game = await sync_to_async(AIChessGame.objects.get, thread_sensitive=True)(pk=self.room_name)
+                print(static("ai_model/model.h5"))
+                filepath = finders.find("ai_model/model.h5")
+                print(filepath)
+                print(game.pk)
+                
+                self.ai_model = keras.models.load_model(filepath)
             self.game_room = game
         except MultiplayerChessGame.DoesNotExist:
             await self.close()
@@ -102,72 +126,8 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                 endy = SQUARE_TO_COORDINATE.get(move["end"][1])-1
                 conversion_piece = move.get("conversionPiece", None)
                 
-                board_move = self.board.make_move([startx, starty], [endx, endy], conversion_piece)
-                print(board_move)
-                if board_move[0]:
-                    color = text_data_json["color"]
-                    piece_type = text_data_json["pieceType"]
-                    
-                    if conversion_piece in STR_TO_PIECE.keys():
-                        db_move = MultiplayerGameMove(
-                            from_x=startx,
-                            from_y=starty,
-                            to_x=endx,
-                            to_y=endy,
-                            color=self.color,
-                            conversion_piece=PIECE_TO_NUM[conversion_piece],
-                            game=self.game_room
-                        )
-                    else:
-                        db_move = MultiplayerGameMove(
-                            from_x=startx,
-                            from_y=starty,
-                            to_x=endx,
-                            to_y=endy,
-                            color=self.color,
-                            game=self.game_room
-                        )
-                    await sync_to_async(db_move.save, thread_sensitive=True)()
-                    
-                    if board_move[1] is not None:
-                        db_capture = MultiplayerGameCapture(
-                            captured_piece=PIECE_TO_NUM[board_move[1][1]],
-                            color=board_move[1][0],
-                            game=self.game_room
-                        )
-                        await sync_to_async(db_capture.save, thread_sensitive=True)()
-                    
-                    await self.channel_layer.group_send(
-                        self.room_group_name,
-                        {
-                            "type": "move_made",
-                            "move": {
-                                "start": [startx, starty],
-                                "end": [endx, endy],
-                                "qCastle": board_move[2],
-                                "kCastle": board_move[3],
-                                "enPassant": board_move[4],
-                                "conversion": board_move[5],
-                            },
-                            "color": color,
-                            "pieceType": piece_type,
-                            "username": username
-                        }
-                    )
-                    
-                    await self.channel_layer.group_send(
-                        self.room_group_name,
-                        {
-                            "type": "update_board",
-                            "move": {
-                                "start": [startx, starty],
-                                "end": [endx, endy],
-                                "conversionPiece": board_move[5],
-                            },
-                            "color": color,
-                            "username": username
-                        }
-                    )
+                if await self.execute_new_move_chain([[startx, starty], [endx, endy], conversion_piece], self.color):
+                    await self.make_ai_move_if_possible()
 
     async def send_position(self, event):
         board = event["board"]
@@ -179,7 +139,7 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
             "username": username,
         }))
 
-    @sync_to_async       
+    @sync_to_async
     def update_board(self, event):
         move = event["move"]
         color = event["color"]
@@ -209,6 +169,7 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
         piece_type = event["pieceType"]
         username = event["username"]
         print(color, piece_type)
+
         await self.send(json.dumps({
             "command": "make_move",
             "move": move,
@@ -217,6 +178,112 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
             "username": username,
         }))
 
+    async def make_ai_move_if_possible(self):
+        print("start1")
+        if self.game_room_type != "ai":
+            return
+        print("start2")
+        print(self.ai_model.predict([self.board.ai_input_list]))
+        print("end")
+        
+        mcts_node = mcts(MCTSNode(deepcopy(self.board)), self.ai_model, 100)
+        print(mcts_node)
+        print(mcts_node.board)
+        print(mcts_node.board.integer_board)
+        print(mcts_node.move)
+        move_res = await self.execute_new_move_chain(mcts_node.move, -self.color)
+        print(move_res)
+
+        print("done :)")
+    
+    async def execute_new_move_chain(self, move, colorint):
+        board_move = self.board.make_move(*move)
+        startx, starty = move[0]
+        endx, endy = move[1]
+        conversion_piece = move[2]
+        colorstr = "w" if colorint == 1 else "b"
+
+        if board_move[0]:
+            if conversion_piece in STR_TO_PIECE.keys():
+                piece_type = "p"
+                if self.game_room_type == "multiplayer":
+                    db_move = MultiplayerGameMove(
+                        from_x=startx,
+                        from_y=starty,
+                        to_x=endx,
+                        to_y=endy,
+                        color=colorint,
+                        conversion_piece=PIECE_TO_NUM[conversion_piece],
+                        game=self.game_room
+                    )
+                else:
+                    db_move = AIGameMove(
+                        from_x=startx,
+                        from_y=starty,
+                        to_x=endx,
+                        to_y=endy,
+                        color=colorint,
+                        conversion_piece=PIECE_TO_NUM[conversion_piece],
+                        game=self.game_room
+                    )
+            else:
+                piece_type = self.board.board[endx][endy].name
+                if self.game_room_type == "multiplayer":
+                    db_move = MultiplayerGameMove(
+                        from_x=startx,
+                        from_y=starty,
+                        to_x=endx,
+                        to_y=endy,
+                        color=colorint,
+                        game=self.game_room
+                    )
+                else:
+                    db_move = AIGameMove(
+                        from_x=startx,
+                        from_y=starty,
+                        to_x=endx,
+                        to_y=endy,
+                        color=colorint,
+                        game=self.game_room
+                    )
+            await sync_to_async(db_move.save, thread_sensitive=True)()
+
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "move_made",
+                    "move": {
+                        "start": [startx, starty],
+                        "end": [endx, endy],
+                        "qCastle": board_move[2],
+                        "kCastle": board_move[3],
+                        "enPassant": board_move[4],
+                        "conversion": board_move[5],
+                    },
+                    "color": colorstr,
+                    "pieceType": piece_type,
+                    "username": self.user.username
+                }
+            )
+            
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "update_board",
+                    "move": {
+                        "start": [startx, starty],
+                        "end": [endx, endy],
+                        "conversionPiece": board_move[5],
+                    },
+                    "color": colorstr,
+                    "username": self.user.username
+                }
+            )
+            
+            return True
+        
+        return False
+        
 
 class MatchmakingConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -250,21 +317,34 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         await sync_to_async(self.matchmaking.leave, thread_sensitive=True)(self.user)
 
     async def new_connection(self, event):
-        if await sync_to_async(self.matchmaking.connected_users_count, thread_sensitive=True)() >= 2:
-            mm_response = await sync_to_async(self.matchmaking.join_game, thread_sensitive=True)()
+        new_games = await sync_to_async(self.matchmaking.join_game, thread_sensitive=True)()
+
+        for game in new_games:
+            users, game_id = game
             
-            if mm_response is not None:
-                users, game_id = mm_response
-                if users[0].pk == self.user.pk or users[1].pk == self.user.pk:
-                    await self.channel_layer.group_send(
-                        self.room_group_name,
-                        {
-                            "type": "game_connection",
-                            "game_url": reverse("chess_game:chessboard", args=[game_id]),
-                            "user1_username": users[0].username,
-                            "user2_username": users[1].username
-                        }
-                    )
+            if len(users) == 2: # multiplayer game
+                encrypted_game = encrypt(f"multiplayer-{game_id}")
+
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        "type": "game_connection",
+                        "game_url": reverse("chess_game:chessboard", args=[encrypted_game]),
+                        "user1_username": users[0].username,
+                        "user2_username": users[1].username
+                    }
+                )
+            elif len(users) == 1: # ai game
+                encrypted_game = encrypt(f"ai-{game_id}")
+
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        "type": "ai_game_connection",
+                        "game_url": reverse("chess_game:chessboard", args=[encrypted_game]),
+                        "user_username": users[0].username
+                    }
+                )
     
     async def game_connection(self, event):
         game_url = event["game_url"]
@@ -272,6 +352,17 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         user2_username = event["user2_username"]
         
         if user1_username == self.user.username or user2_username == self.user.username:
+            await self.send(json.dumps({
+                "command": "join_game",
+                "gameUrl": game_url,
+            }))
+            await self.close()
+
+    async def ai_game_connection(self, event):
+        game_url = event["game_url"]
+        user_username = event["user_username"]
+
+        if user_username == self.user.username:
             await self.send(json.dumps({
                 "command": "join_game",
                 "gameUrl": game_url,
