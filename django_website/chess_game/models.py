@@ -114,18 +114,7 @@ class MultiplayerGameMove(Move):
     
 class AIGameMove(Move):
     game = models.ForeignKey(AIChessGame, verbose_name="game", related_name="moves", on_delete=models.CASCADE)
-    
 
-class Capture(models.Model):
-    captured_piece = models.IntegerField(choices=PieceChoice.choices)
-    color = models.IntegerField(choices=ColorChoice.choices)
-
-class MultiplayerGameCapture(Capture):
-    game = models.ForeignKey(MultiplayerChessGame, verbose_name="game", related_name="captures", on_delete=models.CASCADE)
-    
-class AIGameCapture(Capture):
-    game = models.ForeignKey(AIChessGame, verbose_name="game", related_name="captures", on_delete=models.CASCADE)
-    
 
 class Matchmaking(models.Model):
     connected_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="connected_matchmaking", blank=True)

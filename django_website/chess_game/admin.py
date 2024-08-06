@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Matchmaking, MultiplayerChessGame, MultiplayerGameMove, MultiplayerGameCapture, AIChessGame, AIGameMove, AIGameCapture
+from .models import Matchmaking, MultiplayerChessGame, MultiplayerGameMove, AIChessGame, AIGameMove
 
 
 @admin.register(MultiplayerChessGame)
@@ -19,14 +19,6 @@ class MultiplayerGameMoveAdmin(admin.ModelAdmin):
     list_filter = ("from_x", "from_y", "to_x", "to_y", "color")
     search_fields = ("id", "from_x", "from_y", "to_x", "to_y", "color")
 
-@admin.register(MultiplayerGameCapture)
-class MultiplayerGameCaptureAdmin(admin.ModelAdmin):
-    list_display = ("id", "captured_piece", "color")
-    list_display_links = ("id", "captured_piece", "color")
-    readonly_fields = ("id",)
-    list_filter = ("captured_piece", "color")
-    search_fields = ("id", "captured_piece", "color")
-
 @admin.register(AIChessGame)
 class AIChessGameAdmin(admin.ModelAdmin):
     list_display = ("id", "player")
@@ -42,14 +34,6 @@ class AIGameMoveAdmin(admin.ModelAdmin):
     readonly_fields = ("id",)
     list_filter = ("from_x", "from_y", "to_x", "to_y", "color")
     search_fields = ("id", "from_x", "from_y", "to_x", "to_y", "color")
-
-@admin.register(AIGameCapture)
-class AIGameCaptureAdmin(admin.ModelAdmin):
-    list_display = ("id", "captured_piece", "color")
-    list_display_links = ("id", "captured_piece", "color")
-    readonly_fields = ("id",)
-    list_filter = ("captured_piece", "color")
-    search_fields = ("id", "captured_piece", "color")
 
 @admin.register(Matchmaking)
 class MatchmakingAdmin(admin.ModelAdmin):

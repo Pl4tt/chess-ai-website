@@ -16,7 +16,7 @@ from .url_encryption import encrypt
 
 from .constants import ALLOWED_TYPES, NUM_TO_PIECE, PIECE_TO_NUM, SQUARE_TO_COORDINATE
 from .board import STR_TO_PIECE, ChessBoard
-from .models import AIChessGame, AIGameMove, Matchmaking, MultiplayerGameCapture, MultiplayerChessGame, MultiplayerGameMove
+from .models import AIChessGame, AIGameMove, Matchmaking, MultiplayerChessGame, MultiplayerGameMove
 
 
 class ChessGameConsumer(AsyncWebsocketConsumer):
