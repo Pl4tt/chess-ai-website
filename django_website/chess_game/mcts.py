@@ -1,10 +1,11 @@
-from chess import Board
 from copy import deepcopy
 import numpy as np
 
+from .board import ChessBoard
+
 
 class MCTSNode:
-    def __init__(self, board: Board, parent=None, move=None):
+    def __init__(self, board: ChessBoard, parent=None, move=None):
         self.board = board
         self.parent = parent
         self.move = move
