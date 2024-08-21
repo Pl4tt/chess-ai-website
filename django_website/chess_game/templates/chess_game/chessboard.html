@@ -171,6 +171,8 @@
 </style>
 
 
+<div class="hidden game-over-text"></div>
+
 <table class="conversion-squares conversion-squares-w hidden">
 	<tbody>
 		<tr>
@@ -332,6 +334,7 @@
 	let conversionPiece = null;
 	let globalEndx = null;
 	let globalEndy = null;
+	let gameOverTextSquare = document.querySelector(".game-over-text");
 	
 	const user_username = JSON.parse(document.getElementById("user_username").textContent);
 	const game_id = JSON.parse(document.getElementById("game_id").textContent);
@@ -403,6 +406,36 @@
 			bConversionSquareContainer.classList.add("hidden");
 		}
 	}
+	function checkGameOver(winner) {
+		console.log(1)
+		console.log(winner)
+		console.log(typeof(winner))
+		console.log(!winner)
+		if (winner != 0) {
+			let winnerText = ""
+
+			switch (winner) {
+				case 2:
+					winnerText = "Game is a Draw.";
+					break;
+				
+				case 1:
+					winnerText = "White won the game.";
+					break;
+				
+				case -1:
+					winnerText = "Black won the game.";
+					break;
+				
+				default:
+					return;
+			}
+			console.log("Game Over. " + winnerText)
+			//window.alert("Game Over. " + winnerText)
+			gameOverTextSquare.innerHTML = "Game Over. " + winnerText
+			gameOverTextSquare.classList.remove("hidden")
+		}
+	}
 
 	function renderDefaultColors() {
 		lightSquares.forEach((sq) => {
@@ -448,6 +481,17 @@
 		}
 	};
 
+	function sendMakeAiMoveIfPossible() {
+		console.log(1)
+		if (game_type == "ai") {
+			console.log(2)
+			gameSocket.send(JSON.stringify({
+				"command": "make_ai_move_if_possible",
+				"username": user_username
+			}))
+		}
+	}
+
 	gameSocket.onmessage = function(e) {
 		let data = JSON.parse(e.data);
 		
@@ -464,6 +508,7 @@
 			let conversion = data["move"]["conversion"];
 			let color = data["color"];
 			let pieceType = data["pieceType"];
+			let winner = data["winner"];
 	
 			let startSquare = document.querySelector(".square-" + startx.toString() + starty);
 			let endSquare = document.querySelector(".square-" + endx.toString() + endy);
@@ -514,9 +559,15 @@
 
 			updatePieceSquares();
 			resetConversion();
+			checkGameOver(winner);
+
+			if (winner == 0) {
+				sendMakeAiMoveIfPossible()
+			}
 		}
 		else if (command === "initiate_position") {
 			let board = data["board"];
+			let winner = data["winner"];
 			console.log(board)
 
 			for (let square of allSquares) {
@@ -538,6 +589,9 @@
 
 			updatePieceSquares();
 			resetConversion();
+			checkGameOver(winner);
+			
+			sendMakeAiMoveIfPossible();
 		}
 	}
 

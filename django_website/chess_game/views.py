@@ -1,24 +1,9 @@
-from typing import Any
-from django.http import Http404, HttpRequest, HttpResponseNotAllowed
-from django.shortcuts import render
+from django.http import Http404
 from django.views.generic.base import TemplateView
 
 from .constants import ALLOWED_TYPES
 from .url_encryption import decrypt
-from .models import AIChessGame, Matchmaking, MultiplayerChessGame
-
-
-DEFAULT_POSITION = [
-    [-4, -2, -3, -5, -6, -3, -2, -4],
-    [-1, -1, -1, -1, -1, -1, -1, -1],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [4, 2, 3, 5, 6, 3, 2, 4]
-
-]
+from .models import AIChessGame, MultiplayerChessGame
 
 
 class LobbyView(TemplateView):
@@ -28,17 +13,8 @@ class MatchmakingView(TemplateView):
     template_name = "chess_game/matchmaking.html"
 
 class ChessGameView(TemplateView):
-    # template_name = "chess_game/chessboard.html"
+    template_name = "chess_game/chessboard.html"
     allowed_types = ALLOWED_TYPES
-    
-    def get_template_names(self):
-        if self.game_type == "multiplayer":
-            self.template_name = "chess_game/multiplayer_chessboard.html"
-        else:
-            self.template_name = "chess_game/ai_chessboard.html"
-        
-        return super().get_template_names()
-        
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

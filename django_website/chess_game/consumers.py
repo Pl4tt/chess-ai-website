@@ -66,9 +66,9 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
 
         is_member = await sync_to_async(self.game_room.check_user, thread_sensitive=True)(self.user)
         if not is_member:
-            await self.close()
-            
-        self.color = 1 if self.game_room.is_white(self.user) else -1
+            self.color = 0
+        else:
+            self.color = 1 if self.game_room.is_white(self.user) else -1
 
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -79,13 +79,17 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
         await sync_to_async(self.game_room.join, thread_sensitive=True)(self.user.pk)
 
         await self.load_position()
+
+        if self.game_room_type == "ai" and self.color != self.board.player_turn:
+            pass
         
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 "type": "send_position",
                 "board": self.board.integer_board,
-                "username": self.user.username
+                "username": self.user.username,
+                "winner": self.game_room.winner,
             }
         )
 
@@ -119,24 +123,41 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                 await self.disconnect(close_code=4003)
                 return
 
+            if not self.color:
+                return
+            
             if move is not None:
                 startx = int(move["start"][0])-1
                 starty = SQUARE_TO_COORDINATE.get(move["start"][1])-1
                 endx = int(move["end"][0])-1
                 endy = SQUARE_TO_COORDINATE.get(move["end"][1])-1
                 conversion_piece = move.get("conversionPiece", None)
-                
-                if await self.execute_new_move_chain([[startx, starty], [endx, endy], conversion_piece], self.color):
-                    await self.make_ai_move_if_possible()
+
+                await self.execute_new_move_chain([[startx, starty], [endx, endy], conversion_piece], self.color)
+
+        elif command == "make_ai_move_if_possible":
+            username = text_data_json.get("username")
+            
+            if username != self.user.username:
+                await self.disconnect(close_code=4003)
+                return
+            
+            if not self.color:
+                print(1)
+                return
+
+            await self.make_ai_move_if_possible()
 
     async def send_position(self, event):
         board = event["board"]
         username = event["username"]
+        winner = event["winner"]
         
         await self.send(json.dumps({
             "command": "initiate_position",
             "board": board,
             "username": username,
+            "winner": winner,
         }))
 
     @sync_to_async
@@ -168,6 +189,7 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
         color = event["color"]
         piece_type = event["pieceType"]
         username = event["username"]
+        winner = event["winner"]
         print(color, piece_type)
 
         await self.send(json.dumps({
@@ -176,11 +198,12 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
             "color": color,
             "pieceType": piece_type,
             "username": username,
+            "winner": winner,
         }))
 
     async def make_ai_move_if_possible(self):
         print("start1")
-        if self.game_room_type != "ai":
+        if self.game_room_type != "ai" or self.board.player_turn == self.game_room.get_player_color():
             return
         print("start2")
         print(self.ai_model.predict([self.board.ai_input_list]))
@@ -248,6 +271,10 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                     )
             await sync_to_async(db_move.save, thread_sensitive=True)()
 
+            winner = self.board.check_game_over()
+            self.game_room.update_winner(winner)
+            await sync_to_async(self.game_room.save, thread_sensitive=True)()
+            
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -262,7 +289,8 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                     },
                     "color": colorstr,
                     "pieceType": piece_type,
-                    "username": self.user.username
+                    "username": self.user.username,
+                    "winner": self.game_room.winner,
                 }
             )
             
@@ -276,7 +304,8 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                         "conversionPiece": board_move[5],
                     },
                     "color": colorstr,
-                    "username": self.user.username
+                    "username": self.user.username,
+                    "winner": self.game_room.winner,
                 }
             )
             

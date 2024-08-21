@@ -23,14 +23,26 @@ class ConversionPieceChoice(models.IntegerChoices):
     ROOK = 4, "Rook"
     QUEEN = 5, "Queen"
     
+class WinnerChoice(models.IntegerChoices):
+    WHITE = 1, "White"
+    BLACK = -1, "Black"
+    DRAW = 2, "Draw"
+    NONE = 0, "None"
+    
 
 class MultiplayerChessGame(models.Model):
     white_player = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="white_player", related_name="white_games", on_delete=models.CASCADE, blank=True)
     black_player = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="black_player", related_name="black_games", on_delete=models.CASCADE, blank=True)
     connected_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="connected_multiplayer_games", blank=True)
+    winner = models.IntegerField(choices=WinnerChoice.choices, default=0)
     
     def is_connected(self, user):
         return user in self.connected_users.all()
+    
+    def update_winner(self, winner):
+        if not self.winner:
+            print("Winner changed ", self.winner, winner)
+            self.winner = winner
     
     def is_white(self, user):
         return user == self.white_player
@@ -66,10 +78,15 @@ class AIChessGame(models.Model):
     player = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="player", related_name="ai_games", on_delete=models.CASCADE, blank=True)
     color = models.IntegerField(choices=ColorChoice.choices)
     connected_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="connected_ai_games", blank=True)
+    winner = models.IntegerField(choices=WinnerChoice.choices, default=0)
     
     def is_connected(self, user):
         return user in self.connected_users.all()
     
+    def update_winner(self, winner):
+        if not self.winner:
+            self.winner = winner
+
     def is_white(self, user):
         return self.check_user(user) and self.color == 1
     
@@ -80,6 +97,9 @@ class AIChessGame(models.Model):
         if not self.check_user(user):
             return None
         return "w" if self.color == 1 else "b"
+    
+    def get_player_color(self):
+        return self.color
 
     def join(self, user):
         if not self.is_connected(user):
@@ -191,7 +211,9 @@ class Matchmaking(models.Model):
         user = self.connected_users.all()[0]
         self.leave(user)
         
-        game = AIChessGame(player=user, color=1)
+        color = -1 if not random.randint(0, 1) else 1
+        
+        game = AIChessGame(player=user, color=color)
         game.save()
 
         return [[user], game.pk]
