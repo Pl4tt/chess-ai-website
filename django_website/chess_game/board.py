@@ -1,6 +1,7 @@
 from copy import deepcopy
 import itertools
 
+from .constants import BISHOP, KNIGHT
 from .pieces import KingPiece, QueenPiece, RookPiece, BishopPiece, KnightPiece, PawnPiece
 
 
@@ -88,11 +89,45 @@ class ChessBoard:
         
         return False
     
+    def is_dead_position(self):
+        pieces = {
+            1: [],
+            -1: [],
+        }
+        
+        # get pieces
+        for row in self.board:
+            for piece in row:
+                if piece is not None:
+                    pieces[piece.color].append(piece.name)
+
+        piece_count = len(pieces[1]) + len(pieces[-1])
+        
+        if piece_count > 4:
+            return False
+        
+        if piece_count == 2:
+            return True
+        
+        if piece_count == 4:
+            if len(pieces[1]) == len(pieces[-1]) and (KNIGHT in pieces[1] or BISHOP in pieces[1]) and (KNIGHT in pieces[-1] or BISHOP in pieces[-1]):
+                return True
+            
+            return False
+        
+        player_two_pieces = pieces[1] if len(pieces[1]) == 2 else pieces[-1]
+        
+        return KNIGHT in player_two_pieces or BISHOP in player_two_pieces
+    
     def check_game_over(self): # 1: white win, -1: black win, 2: draw, 0: not game over
+        if self.is_dead_position():
+            return 2
+        
         if self.is_check():
             return -self.player_turn if not self.get_all_legal_moves() else 0
-        else: # check for stalemate
-            return 2 if not self.get_all_legal_moves() else 0
+        
+        # check for stalemate
+        return 2 if not self.get_all_legal_moves() else 0
     
     def make_move(self, start_pos, end_pos, conversion_piece): # conversion_piece: None/q/r/b/n
         """

@@ -126,6 +126,9 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
             if not self.color:
                 return
             
+            if self.game_room.winner != 0:
+                return
+            
             if move is not None:
                 startx = int(move["start"][0])-1
                 starty = SQUARE_TO_COORDINATE.get(move["start"][1])-1
