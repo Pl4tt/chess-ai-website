@@ -285,10 +285,10 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                     "move": {
                         "start": [startx, starty],
                         "end": [endx, endy],
-                        "qCastle": board_move[2],
-                        "kCastle": board_move[3],
-                        "enPassant": board_move[4],
-                        "conversion": board_move[5],
+                        "qCastle": board_move[1],
+                        "kCastle": board_move[2],
+                        "enPassant": board_move[3],
+                        "conversion": board_move[4],
                     },
                     "color": colorstr,
                     "pieceType": piece_type,
@@ -304,7 +304,7 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                     "move": {
                         "start": [startx, starty],
                         "end": [endx, endy],
-                        "conversionPiece": board_move[5],
+                        "conversionPiece": board_move[4],
                     },
                     "color": colorstr,
                     "username": self.user.username,

@@ -147,37 +147,51 @@ class ChessBoard:
         
         startx, starty = start_pos
         endx, endy = end_pos
-        return_captures = None
         q_castle_move = False
         k_castle_move = False
         en_passant_move = False
         return_conversion = None
         
         if startx > 7 or startx < 0 or starty > 7 or starty < 0 or endx > 7 or endx < 0 or endy > 7 or endy < 0:
-            return False, return_captures, q_castle_move, k_castle_move, en_passant_move, return_conversion
+            return False, q_castle_move, k_castle_move, en_passant_move, return_conversion
         
         piece = self.board[startx][starty]
         end_piece = self.board[endx][endy]
         
         if piece is None:
-            return False, return_captures, q_castle_move, k_castle_move, en_passant_move, return_conversion
+            return False, q_castle_move, k_castle_move, en_passant_move, return_conversion
         
         color = piece.color
 
         if self.player_turn != color:
-            return False, return_captures, q_castle_move, k_castle_move, en_passant_move, return_conversion
+            return False, q_castle_move, k_castle_move, en_passant_move, return_conversion
         
         if end_piece is not None and end_piece.color == color:
-            return False, return_captures, q_castle_move, k_castle_move, en_passant_move, return_conversion
+            return False, q_castle_move, k_castle_move, en_passant_move, return_conversion
 
         if piece.is_valid_move(start_pos, end_pos, self.board, self.castles_allowed, self.player_turn, self.prev_move, end_piece):
-            if end_piece is not None:
-                return_captures = (end_piece.color, end_piece.name)
-                
             allows_en_passant = isinstance(piece, PawnPiece) and abs(end_pos[0]-start_pos[0]) == 2
             
-            if isinstance(piece, KingPiece) and abs(end_pos[1]-start_pos[1]) == 2 and self.is_check():
-                return False, None, False, False, False, None
+            # Prevent castle when in check or moving through check
+            if isinstance(piece, KingPiece) and abs(end_pos[1]-start_pos[1]) == 2:
+                if self.is_check():
+                    return False, False, False, False, None
+                if end_pos[1] > start_pos[1]: # king side castle
+                    self.king_pos[self.player_turn] = [endx, starty+1]
+
+                    if self.is_check():
+                        self.king_pos[self.player_turn] = [startx, starty]
+                        return False, False, False, False, None
+                    
+                    self.king_pos[self.player_turn] = [startx, starty]
+                else:
+                    self.king_pos[self.player_turn] = [endx, starty-1]
+                    
+                    if self.is_check():
+                        self.king_pos[self.player_turn] = [startx, starty]
+                        return False, False, False, False, None
+                    
+                    self.king_pos[self.player_turn] = [startx, starty]
             
             # Update self.king_pos
             if isinstance(piece, KingPiece):
@@ -193,7 +207,7 @@ class ChessBoard:
 
                 self.board[startx][starty] = piece
                 self.board[endx][endy] = end_piece
-                return False, None, False, False, False, None
+                return False, False, False, False, None
             
             # En Passant Capture
             if (
@@ -204,8 +218,6 @@ class ChessBoard:
                 end_piece is None
             ):
                 en_passant_move = True
-                captured_piece = self.board[end_pos[0]-self.player_turn][end_pos[1]]
-                return_captures = (captured_piece.color, captured_piece.name)
                 self.board[end_pos[0]-self.player_turn][end_pos[1]] = None
             
             # Castle
@@ -245,9 +257,9 @@ class ChessBoard:
             self.prev_move = (start_pos, end_pos, color, allows_en_passant)
             self.player_turn *= -1
 
-            return True, return_captures, q_castle_move, k_castle_move, en_passant_move, return_conversion
+            return True, q_castle_move, k_castle_move, en_passant_move, return_conversion
         
-        return False, return_captures, q_castle_move, k_castle_move, en_passant_move, return_conversion
+        return False, q_castle_move, k_castle_move, en_passant_move, return_conversion
 
     @property
     def integer_board(self):
