@@ -1,9 +1,28 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %} 
+
+{% block title %}Lobby{% endblock title %}
+{% block content %}
 Lobby
+{% if user_authenticated %}
 <form action="{% url 'chess_game:matchmaking'  %}" method="get">
   {% csrf_token %}
   <button>Play</button>
 </form>
+<form action="{% url 'account:logout'  %}" method="get">
+  {% csrf_token %}
+  <button>Logout</button>
+</form>
+{% else %}
+Please sign in in order to play the game.
+<form action="{% url 'account:login'  %}" method="get">
+  {% csrf_token %}
+  <button>Login</button>
+</form>
+<form action="{% url 'account:register'  %}" method="get">
+  {% csrf_token %}
+  <button>Register</button>
+</form>
+{% endif %}
 {% endblock content %}
 
 {% block scripts %}

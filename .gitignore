@@ -1,5 +1,6 @@
 env/
 venv/
+aivenv/
 
 lichess_db_eval.json
 test_eval.json

@@ -55,7 +55,7 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
             else:
                 game = await sync_to_async(AIChessGame.objects.get, thread_sensitive=True)(pk=self.room_name)
                 print(static("ai_model/model.h5"))
-                filepath = finders.find("ai_model/model.h5")
+                filepath = finders.find("ai_model/model_100.h5")
                 print(filepath)
                 print(game.pk)
                 

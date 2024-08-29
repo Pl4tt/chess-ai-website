@@ -1,4 +1,7 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %}
+
+{% block title %}Chess Game{% endblock title %}
+{% block content %}
 <style>
 	.chess-board {
 		border-spacing: 0;
@@ -54,9 +57,12 @@
 		}
 	}
 	.light {
+		/*background-color: #f4f2cb;*/
 		background-color: #eee;
 	}
 	.dark {
+		/*background-color: #680d0d;*/
+		/*background-color: #ea72ac;*/
 		background-color: #aaa;
 	}
   .piece-wk {
@@ -168,10 +174,23 @@
 	.z-20 {
 		z-index: 20;
 	}
+	
+	.centered-horizontally {
+		text-align: center;
+	}
 </style>
 
 
 <div class="hidden game-over-text"></div>
+<div class="centered-horizontally">
+	{% if player_color == "w" %}
+		You are the white player.
+	{% elif player_color == "b" %}
+		You are the black player.
+	{% else %}
+		You are a spectator.
+	{% endif %}
+</div>
 
 <table class="conversion-squares conversion-squares-w hidden">
 	<tbody>

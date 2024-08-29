@@ -1,5 +1,6 @@
 from django.http import Http404
 from django.views.generic.base import TemplateView
+from django.shortcuts import redirect
 
 from .constants import ALLOWED_TYPES
 from .url_encryption import decrypt
@@ -8,14 +9,33 @@ from .models import AIChessGame, MultiplayerChessGame
 
 class LobbyView(TemplateView):
     template_name = "chess_game/lobby.html"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        context["user_authenticated"] = self.request.user.is_authenticated
+        
+        return context
 
 class MatchmakingView(TemplateView):
     template_name = "chess_game/matchmaking.html"
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect("chess_game:lobby")
+
+        return super().dispatch(request, *args, **kwargs)
 
 class ChessGameView(TemplateView):
     template_name = "chess_game/chessboard.html"
     allowed_types = ALLOWED_TYPES
     
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect("chess_game:lobby")
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 

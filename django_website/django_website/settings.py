@@ -32,6 +32,8 @@ AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.AllowAllUsersModelBackend",
 )
 
+LOGIN_REDIRECT_URL = "chess_game:lobby"
+LOGOUT_REDIRECT_URL = "chess_game:lobby"
 
 # Application definition
 
