@@ -141,7 +141,12 @@ class Matchmaking(models.Model):
     
     @classmethod
     def object(cls):
-        return cls._default_manager.all().first()
+        obj = cls._default_manager.all().first()
+        
+        if obj is None:
+            raise Matchmaking.DoesNotExist
+
+        return obj
     
     def save(self, *args, **kwargs):
         if not self.pk and Matchmaking.objects.exists():

@@ -320,7 +320,12 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
 class MatchmakingConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
-        self.matchmaking = await sync_to_async(Matchmaking.object, thread_sensitive=True)()
+        try:
+            self.matchmaking = await sync_to_async(Matchmaking.object, thread_sensitive=True)()
+        except Matchmaking.DoesNotExist:
+            await sync_to_async(Matchmaking.objects.create, thread_sensitive=True)()
+        finally:
+            self.matchmaking = await sync_to_async(Matchmaking.object, thread_sensitive=True)()
 
         self.room_name = self.matchmaking.pk
         self.room_group_name = f"matchmaking_{self.room_name}"
