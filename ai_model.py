@@ -1,11 +1,11 @@
 import os
 import json
-import chess
 import random
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers
+import matplotlib.pyplot as plt
 
 # white = 1, black = -1
 
@@ -38,69 +38,86 @@ board_mappings = {
     "g": 48,
     "h": 56
 }
+BATCH_SIZE = 256
+BUFFER_SIZE = 20000
 
-# dir_path = os.getcwd()
+def plot_values(epochs, acc):
 
-# # def get_datasets():
-# #     train_cats = np.array([cv2.resize(cv2.imread(f"{dir_path}\\dataset\\training_set\\cats\\cat.{i}.jpg"), (128, 128)) for i in range(1, 4001)])  # (4000, 128, 128, 3)
-# #     train_dogs = np.array([cv2.resize(cv2.imread(f"{dir_path}\\dataset\\training_set\\dogs\\dog.{i}.jpg"), (128, 128)) for i in range(1, 4001)])  # (4000, 128, 128, 3)
-# #     test_cats = np.array([cv2.resize(cv2.imread(f"{dir_path}\\dataset\\test_set\\cats\\cat.{i}.jpg"), (128, 128)) for i in range(4001, 5001)])  # (1000, 128, 128, 3)
-# #     test_dogs = np.array([cv2.resize(cv2.imread(f"{dir_path}\\dataset\\test_set\\dogs\\dog.{i}.jpg"), (128, 128)) for i in range(4001, 5001)])  # (1000, 128, 128, 3)
-    
-# #     train_images = np.concatenate((train_cats, train_dogs))  # (8000, 128, 128, 3)
-# #     train_labels = np.concatenate((np.zeros((4000,)), np.ones((4000,))))  # (8000,)
+    plt.plot(epochs, acc, 'bo', label='Training acc')
+    plt.title('Training accuracy')
+    plt.legend()
 
-# #     test_images = np.concatenate((test_cats, test_dogs))  # (2000, 128, 128, 3)
-# #     test_labels = np.concatenate((np.zeros((1000,)), np.ones((1000,))))  # (2000,)
+    plt.figure()
 
-# #     train_images, train_labels = shuffle(train_images, train_labels)
-# #     test_images, test_labels = shuffle(test_images, test_labels)
+    plt.savefig('/content/drive/MyDrive/accuracy.png')
 
-# #     return train_images, train_labels, test_images, test_labels
+    plt.show()
 
-def create_model(num_hneurons):
+def create_model(num_hneurons, model_optimizer):
     model = keras.Sequential()
     num_hlayers = len(num_hneurons)
     input_shape = (70,)
 
-    # model.add(layers.Dense(num_hneurons[0], input_shape=input_shape))
-    model.add(layers.InputLayer(num_hneurons[0], input_shape=input_shape))
-    
+    model.add(layers.InputLayer(input_shape=input_shape))
+
     for i in range(1, num_hlayers):
         model.add(layers.Dense(num_hneurons[i], activation="relu"))
-        
+
     model.add(layers.Dense(1, activation="linear"))
 
-    model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+    model.compile(optimizer=model_optimizer, loss="mean_squared_error", metrics=["accuracy"])
 
     return model
 
-# def random_board(max_depth=200):
-#     board = chess.Board()
-#     depth = random.randrange(0, max_depth)
-    
-#     for _ in range(depth):
-#         all_moves = list(board.legal_moves)
-#         random_move = random.choice(all_moves)
-#         board.push(random_move)
-#         if board.is_game_over():
-#             break
+@tf.function
+def train_step(data):
+    x, y = data
 
-#     return board
+    with tf.GradientTape() as tape:
+        y_pred = model(x, training=True)  # Forward pass
+        loss = model.compute_loss(y=y, y_pred=y_pred)
 
-def fit_model(model, input_data, output_data):
-    print(1.1)
-    model.fit(input_data[10:], output_data[10:], epochs=10, batch_size=512)
-    print(1.2)
-    result = model.evaluate(input_data[0:10], output_data[0:10])
-    print(1.3)
-    print(f"result: {result}")
+    trainable_vars = model.trainable_variables
+    gradients = tape.gradient(loss, trainable_vars)
 
-def save_model(model):
-    model.save("model.h5")
+    model.optimizer.apply_gradients(zip(gradients, trainable_vars))
 
-def load_model():
-    return keras.models.load_model("model.h5")
+    for metric in model.metrics:
+        if metric.name == "loss":
+            metric.update_state(loss)
+        else:
+            metric.update_state(y, y_pred)
+
+    return {m.name: m.result() for m in model.metrics}
+
+def train(dataset, epochs):
+    for epoch in range(epochs):
+        print(f"start Epoch {epoch}")
+        start = time.time()
+
+        for data_batch in dataset:
+            train_step(data_batch)
+
+        if (epoch+1)%10 == 0:
+            checkpoint.save(file_prefix=checkpoint_prefix)
+
+        print(model.evaluate(test_inp, test_outp))
+        print(f"Epoch {epoch} finished in {time.time()-start}")
+
+def fit_model(model, dataset):
+    epochs = 200
+
+    with tf.device('/device:GPU:0'):
+        print(0)
+        history = model.fit(dataset, epochs=epochs)
+        # history = model.fit(dataset)
+        # train(dataset, epochs)
+
+    # result = model.evaluate(input_data[0:100], output_data[0:100])
+
+    # print(f"result: {result}")
+    print("Done")
+    plot_values(epochs, history.history["accuracy"])
 
 def process_data(json_data):
     clean_input = []
@@ -111,7 +128,7 @@ def process_data(json_data):
         player = 1 if fen[1] == "w" else -1  # 1 for white, -1 for black
 
         best_evaluation = -player*float("inf")  # initially worst evaluation for current player
-        
+
         for line in position["evals"][0]["pvs"]:
             # if color*best_evaluation == float("inf"):
             #     continue
@@ -124,7 +141,7 @@ def process_data(json_data):
                     best_evaluation = player*float("inf")
             elif player == 1 and cp > best_evaluation or player == -1 and best_evaluation > cp:
                 best_evaluation = cp
-        
+
         matrix_fen = []
 
 
@@ -133,7 +150,7 @@ def process_data(json_data):
                 matrix_fen.append(piece_mappings.get(square))
             else:
                 matrix_fen += [0]*int(square)
-        
+
         matrix_fen += [
             player,
             int("K" in fen[2]),
@@ -151,7 +168,7 @@ def process_data(json_data):
             clean_output.append(-1000000)
         else:
             clean_output.append(best_evaluation)
-    
+
     return clean_input, clean_output
 
 
@@ -179,9 +196,13 @@ if __name__ == "__main__":
     
     input_data, output_data = process_data(json_data)
     print(input_data, output_data)
+    dataset = tf.data.Dataset.from_tensor_slices((input_data, output_data)).batch(BATCH_SIZE)
+    print(dataset)
     
-    model = create_model([512])
+    optimizer = keras.optimizers.Adam(1e-4)
+    model = create_model([70, 128, 32], optimizer)
+    
     print(0)
-    fit_model(model, input_data, output_data)
+    fit_model(model, dataset)
     print(1)
     # model.summary()
