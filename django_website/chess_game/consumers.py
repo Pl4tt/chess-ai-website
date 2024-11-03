@@ -1,22 +1,19 @@
 from copy import deepcopy
 import json
-import random
-import tensorflow as tf
-from tensorflow import keras
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from django.urls import reverse
-from django.conf import settings
-from django.templatetags.static import static
 from django.contrib.staticfiles import finders
+import torch
+from torchsummary import summary
 
 from account.models import Account
-from .mcts import MCTSNode, mcts
 from .url_encryption import encrypt
 
 from .constants import ALLOWED_TYPES, NUM_TO_PIECE, PIECE_TO_NUM, SQUARE_TO_COORDINATE
 from .board import STR_TO_PIECE, ChessBoard
 from .models import AIChessGame, AIGameMove, Matchmaking, MultiplayerChessGame, MultiplayerGameMove
+from .pytorch_modules import ChessNet, choose_move
 
 
 class ChessGameConsumer(AsyncWebsocketConsumer):
@@ -54,12 +51,12 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                 game = await sync_to_async(MultiplayerChessGame.objects.get, thread_sensitive=True)(pk=self.room_name)
             else:
                 game = await sync_to_async(AIChessGame.objects.get, thread_sensitive=True)(pk=self.room_name)
-                print(static("ai_model/model.h5"))
-                filepath = finders.find("ai_model/model_100.h5")
-                print(filepath)
-                print(game.pk)
-                
-                self.ai_model = keras.models.load_model(filepath)
+                filepath = finders.find("ai_model/model_20241103_003053_29")
+                self.ai_model = ChessNet()
+                self.ai_model.load_state_dict(torch.load(filepath, map_location=torch.device('cpu')))
+                self.ai_model.eval()
+                print(summary(self.ai_model, input_size=(6, 8, 8)))
+
             self.game_room = game
         except MultiplayerChessGame.DoesNotExist:
             await self.close()
@@ -205,21 +202,14 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
         }))
 
     async def make_ai_move_if_possible(self):
-        print("start1")
         if self.game_room_type != "ai" or self.board.player_turn == self.game_room.get_player_color():
             return
-        print("start2")
-        print(self.ai_model.predict([self.board.ai_input_list]))
-        print("end")
         
-        mcts_node = mcts(MCTSNode(deepcopy(self.board)), self.ai_model, 100)
-        print(mcts_node)
-        print(mcts_node.board)
-        print(mcts_node.board.integer_board)
-        print(mcts_node.move)
-        move_res = await self.execute_new_move_chain(mcts_node.move, -self.color)
+        with torch.no_grad():
+            chosen_move = choose_move(self.ai_model, self.board, self.board.player_turn)
+        print(chosen_move)
+        move_res = await self.execute_new_move_chain(chosen_move, -self.color)
         print(move_res)
-
         print("done :)")
     
     async def execute_new_move_chain(self, move, colorint):

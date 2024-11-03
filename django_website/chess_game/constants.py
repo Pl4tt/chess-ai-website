@@ -22,6 +22,22 @@ NUM_TO_PIECE = {
     6: KING,
 }
 
+NUM_TO_REPRESENTATION = {
+    -6: KING,
+    -5: QUEEN,
+    -4: ROOK,
+    -3: BISHOP,
+    -2: KNIGHT,
+    -1: PAWN,
+    0: ".",
+    1: PAWN.upper(),
+    2: KNIGHT.upper(),
+    3: BISHOP.upper(),
+    4: ROOK.upper(),
+    5: QUEEN.upper(),
+    6: KING.upper(),
+}
+
 WHITE = "w"
 BLACK = "b"
 

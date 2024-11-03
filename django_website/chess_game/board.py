@@ -1,5 +1,6 @@
 from copy import deepcopy
 import itertools
+from collections import defaultdict, deque
 
 from .constants import BISHOP, KNIGHT
 from .pieces import KingPiece, QueenPiece, RookPiece, BishopPiece, KnightPiece, PawnPiece
@@ -60,6 +61,10 @@ class ChessBoard:
             1: [0, 4],
             -1: [7, 4],
         }
+        
+        # hashed history
+        self.seen_positions = defaultdict(int)
+        self.previous_5_moves = deque([], 5)
     
     def get_all_legal_moves(self):
         moves = []
@@ -127,7 +132,11 @@ class ChessBoard:
             return -self.player_turn if not self.get_all_legal_moves() else 0
         
         # check for stalemate
-        return 2 if not self.get_all_legal_moves() else 0
+        if not self.get_all_legal_moves():
+            return 2
+
+        # check for 3-fold-repetition
+        return 2 if 3 in self.seen_positions.values() else 0
     
     def make_move(self, start_pos, end_pos, conversion_piece): # conversion_piece: None/q/r/b/n
         """
@@ -256,6 +265,9 @@ class ChessBoard:
 
             self.prev_move = (start_pos, end_pos, color, allows_en_passant)
             self.player_turn *= -1
+
+            self.seen_positions[hash(str(self.board))] += 1
+            self.previous_5_moves.append(hash(str([start_pos, end_pos])))
 
             return True, q_castle_move, k_castle_move, en_passant_move, return_conversion
         
