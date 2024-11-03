@@ -159,7 +159,7 @@ def choose_move(model, board: ChessBoard, color):
             
 
             if hash(str([legal_move[0], legal_move[1]])) in board.previous_5_moves:
-                val -= 0.1*REPETITION_PENALTY
+                val -= 0.5*REPETITION_PENALTY
             
             vals.append(val)
         else:
