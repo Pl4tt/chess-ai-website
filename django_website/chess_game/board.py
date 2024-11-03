@@ -299,3 +299,14 @@ class ChessBoard:
             self.en_passant_square,
         ]
         return chess_board
+
+    @property
+    def non_pawn_piece_count(self):
+        count = 0
+        
+        for row in self.board:
+            for piece in row:
+                if piece is not None and not isinstance(piece, PawnPiece):
+                    count += 1
+        
+        return count

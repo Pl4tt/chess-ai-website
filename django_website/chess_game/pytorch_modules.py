@@ -5,11 +5,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
+from .pieces import PawnPiece
 from .board import ChessBoard
 from .constants import NUM_TO_REPRESENTATION
 
 
 REPETITION_PENALTY = 4
+ENDGAME_PAWN_INCENTIVE = 2
 
 class module(nn.Module):
     def __init__(self, hidden_size_in, hidden_size_out, dropout_rate=0.5):
@@ -136,8 +138,14 @@ def choose_move(model, board: ChessBoard, color):
 
     for from_ in froms:
         val = move[0,:,:][7-int(from_[0]), int(from_[1])]
-        vals.append(val)
+        
+        # Pawn push incentive during endgame
+        if board.non_pawn_piece_count <= 6 and isinstance(board.board[int(from_[0])][int(from_[1])], PawnPiece):
+            val += ENDGAME_PAWN_INCENTIVE
+            print(val)
 
+        vals.append(val)
+    print(vals)
     probs = distribution_over_moves(vals)
 
     chosen_from = str(np.random.choice(froms, size=1, p=probs)[0])[:2]
@@ -157,14 +165,14 @@ def choose_move(model, board: ChessBoard, color):
             if seen_pos_num > 1:
                 val -= REPETITION_PENALTY*(seen_pos_num-1.9)
             
-
             if hash(str([legal_move[0], legal_move[1]])) in board.previous_5_moves:
                 val -= 0.5*REPETITION_PENALTY
             
             vals.append(val)
         else:
             vals.append(-float("inf"))
-
+    print(vals)
+    print(legal_moves)
     probs = distribution_over_moves(vals)
 
     chosen_move_index = np.random.choice(len(legal_moves), size=1, p=probs)

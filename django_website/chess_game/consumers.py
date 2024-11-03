@@ -5,7 +5,6 @@ from asgiref.sync import sync_to_async
 from django.urls import reverse
 from django.contrib.staticfiles import finders
 import torch
-from torchsummary import summary
 
 from account.models import Account
 from .url_encryption import encrypt
@@ -51,11 +50,10 @@ class ChessGameConsumer(AsyncWebsocketConsumer):
                 game = await sync_to_async(MultiplayerChessGame.objects.get, thread_sensitive=True)(pk=self.room_name)
             else:
                 game = await sync_to_async(AIChessGame.objects.get, thread_sensitive=True)(pk=self.room_name)
-                filepath = finders.find("ai_model/model_20241103_003053_29")
+                filepath = finders.find("ai_model/model_20241103_134020_79")
                 self.ai_model = ChessNet()
                 self.ai_model.load_state_dict(torch.load(filepath, map_location=torch.device('cpu')))
                 self.ai_model.eval()
-                print(summary(self.ai_model, input_size=(6, 8, 8)))
 
             self.game_room = game
         except MultiplayerChessGame.DoesNotExist:
