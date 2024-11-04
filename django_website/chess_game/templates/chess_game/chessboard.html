@@ -360,7 +360,7 @@
 	const game_type = JSON.parse(document.getElementById("game_type").textContent);
 	const player_color = JSON.parse(document.getElementById("player_color").textContent);
 	let gameSocketProtocol = window.location.protocol == "https:" ? "wss" : "ws";
-	const gameSocket = new WebSocket(`${gameSocketProtocol}://${window.location.host}/ws/chess/${game_type}/${game_id}/`)
+	const gameSocket = new WebSocket(`${gameSocketProtocol}://${window.location.host}:8001/ws/chess/${game_type}/${game_id}/`)
 	// const gameSocket = new WebSocket(`${gameSocketProtocol}://192.168.1.22:8000/ws/chess/${game_id}/`)
 	const COORDINATE_TO_SQUARE = {
 		1: "a",
