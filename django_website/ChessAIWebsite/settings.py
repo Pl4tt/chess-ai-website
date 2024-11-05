@@ -29,7 +29,7 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = ["157.230.126.55",]
+ALLOWED_HOSTS = ["157.230.126.55", "chessai-website.ch", "www.chessai-website.ch"]
 
 ROOT_URLCONF = f'{config("PROJECT_NAME")}.urls'
 
