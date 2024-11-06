@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
 
     "account",
     "chess_game",
@@ -178,6 +179,7 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 AWS_LOCATION = config('AWS_LOCATION')
+AWS_DEFAULT_ACL = 'public-read'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
