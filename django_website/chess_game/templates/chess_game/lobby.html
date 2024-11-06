@@ -4,6 +4,7 @@
 {% block content %}
 Lobby
 {% if user_authenticated %}
+When you press “Play”, you join the matchmaking. There you will be randomly assigned to a game, which can either take place against another player or against an artificial intelligence.
 <form action="{% url 'chess_game:matchmaking'  %}" method="get">
   {% csrf_token %}
   <button>Play</button>
@@ -13,7 +14,7 @@ Lobby
   <button>Logout</button>
 </form>
 {% else %}
-Please sign in in order to play the game.
+Please sign in to play the game. Press "login" to log into your account and "register" if you don't have an account yet. 
 <form action="{% url 'account:login'  %}" method="get">
   {% csrf_token %}
   <button>Login</button>
