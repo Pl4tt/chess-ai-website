@@ -48,7 +48,7 @@ LOGOUT_REDIRECT_URL = "chess_game:lobby"
 # Application definition
 
 INSTALLED_APPS = [
-    "channels",
+    "daphne",
     
     'django.contrib.admin',
     'django.contrib.auth',
