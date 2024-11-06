@@ -2,7 +2,7 @@
 
 {% block title %}Lobby{% endblock title %}
 {% block content %}
-Lobby
+Lobby: 
 {% if user_authenticated %}
 When you press “Play”, you join the matchmaking. There you will be randomly assigned to a game, which can either take place against another player or against an artificial intelligence.
 <form action="{% url 'chess_game:matchmaking'  %}" method="get">
