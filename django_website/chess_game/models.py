@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.conf import settings
 from django.forms import ValidationError
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, post_save
 from django.dispatch.dispatcher import receiver
 import requests
 
@@ -254,3 +254,8 @@ def delete_file_on_model_delete(sender, instance, **kwargs):
         file_url = instance.file.url
         instance.file.delete(save=False)
         purge_cache_for_file(file_url)
+
+@receiver(post_save, sender=TestUpload)
+def purge_cloudflare_on_save(sender, instance, **kwargs):
+    if instance.file:
+        purge_cache_for_file(instance.file.url)
