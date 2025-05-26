@@ -10,3 +10,4 @@ class MediaStorage(S3Boto3Storage):
     location = settings.AWS_MEDIA_LOCATION
     default_acl = settings.AWS_DEFAULT_ACL
     custom_domain = settings.AWS_S3_CUSTOM_DOMAIN
+    file_overwrite = True

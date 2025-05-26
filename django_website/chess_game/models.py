@@ -4,6 +4,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.conf import settings
 from django.forms import ValidationError
+from django.db.models.signals import pre_delete
+from django.dispatch.dispatcher import receiver
 
 class ColorChoice(models.IntegerChoices):
     WHITE = 1, "White"
@@ -230,3 +232,9 @@ class TestUpload(models.Model):
 
     def __str__(self):
         return self.title
+
+
+@receiver(pre_delete, sender=TestUpload)
+def delete_file_on_model_delete(sender, instance, **kwargs):
+    if instance.file:
+        instance.file.delete(save=False)
