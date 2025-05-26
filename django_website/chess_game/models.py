@@ -222,3 +222,11 @@ class Matchmaking(models.Model):
         game.save()
 
         return [[user], game.pk]
+
+
+class TestUpload(models.Model):
+    title = models.CharField(max_length=32)
+    file = models.FileField(upload_to="test_upload/")
+
+    def __str__(self):
+        return self.title

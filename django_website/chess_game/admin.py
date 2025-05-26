@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Matchmaking, MultiplayerChessGame, MultiplayerGameMove, AIChessGame, AIGameMove
+from .models import Matchmaking, MultiplayerChessGame, MultiplayerGameMove, AIChessGame, AIGameMove, TestUpload
 
 
 @admin.register(MultiplayerChessGame)
@@ -42,3 +42,9 @@ class MatchmakingAdmin(admin.ModelAdmin):
     readonly_fields = ("id",)
     search_fields = ("id",)
 
+@admin.register(TestUpload)
+class TestUploadAdmin(admin.ModelAdmin):
+    list_display = ("id", "title")
+    list_display_links = ("id", "title")
+    readonly_fields = ("id",)
+    search_fields = ("id",)
