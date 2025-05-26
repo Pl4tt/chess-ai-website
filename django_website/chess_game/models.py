@@ -6,6 +6,7 @@ from django.conf import settings
 from django.forms import ValidationError
 from django.db.models.signals import pre_delete
 from django.dispatch.dispatcher import receiver
+import requests
 
 class ColorChoice(models.IntegerChoices):
     WHITE = 1, "White"
@@ -234,7 +235,22 @@ class TestUpload(models.Model):
         return self.title
 
 
+def purge_cache_for_file(file_url):
+    headers = {
+        "Authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    data = {"files": [file_url]}
+    requests.post(
+        f'https://api.cloudflare.com/client/v4/zones/{settings.CLOUDFLARE_ZONE_ID}/purge_cache',
+        headers=headers,
+        json=data
+    )
+
+
 @receiver(pre_delete, sender=TestUpload)
 def delete_file_on_model_delete(sender, instance, **kwargs):
     if instance.file:
+        file_url = instance.file.url
         instance.file.delete(save=False)
+        purge_cache_for_file(file_url)
